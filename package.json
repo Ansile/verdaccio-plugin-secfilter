@@ -20,7 +20,7 @@
     "@verdaccio/eslint-config": "^9.3.2",
     "@verdaccio/types": "^9.5.0",
     "eslint": "^6.6.0",
-    "jest": "^26.0.1 ",
+    "jest": "^26.0.1",
     "prettier": "^1.19.1",
     "standard-version": "^8.0.0",
     "typescript": "^3.9.5"
