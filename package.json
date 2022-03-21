@@ -29,6 +29,7 @@
     "security,plugin,verdaccio,middleware,verdaccio-"
   ],
   "author": "Ansile <ansilet@yandex.ru>",
+  "license": "MIT",
   "scripts": {
     "release": "standard-version -a -s",
     "build": "npm run build:types && npm run build:js",
