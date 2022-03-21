@@ -29,7 +29,7 @@
   "keywords": [
     "security,plugin,verdaccio,middleware,verdaccio-"
   ],
-  "author": "Ansile <y.golubev@corp.mail.ru>",
+  "author": "Ansile <ansilet@yandex.ru>",
   "scripts": {
     "release": "standard-version -a -s",
     "build": "npm run build:types && npm run build:js",
