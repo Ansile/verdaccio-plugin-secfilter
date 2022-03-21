@@ -11,8 +11,6 @@
     "node": ">=10"
   },
   "dependencies": {
-    "@verdaccio/commons-api": "^9.6.1",
-    "express": "^4.17.1"
   },
   "devDependencies": {
     "@types/jest": "^24.0.21",

@@ -1,32 +1,63 @@
 /* eslint-disable new-cap */
-import { Logger, IPluginMiddleware, IBasicAuth, IStorageManager, PluginOptions } from '@verdaccio/types';
-import { Router, Request, Response, NextFunction, Application } from 'express';
+import { IPluginStorageFilter, Package, PluginOptions } from '@verdaccio/types';
 
 import { CustomConfig } from '../types/index';
 
-export default class VerdaccioMiddlewarePlugin implements IPluginMiddleware<CustomConfig> {
-  public logger: Logger;
-  public foo: string;
-  public constructor(config: CustomConfig, options: PluginOptions<CustomConfig>) {
-    this.foo = config.foo !== undefined ? config.strict_ssl : true;
-    this.logger = options.logger;
+export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<CustomConfig> {
+  private readonly config: CustomConfig;
+
+  constructor(config: CustomConfig, options: PluginOptions<CustomConfig>) {
+    this.config = config;
+    options.logger.debug(`Loaded plugin-secfilter, ${JSON.stringify(config)}`);
   }
 
-  public register_middlewares(
-    app: Application,
-    auth: IBasicAuth<CustomConfig>,
-    /* eslint @typescript-eslint/no-unused-vars: off */
-    _storage: IStorageManager<CustomConfig>
-  ): void {
-    const router = Router();
-    router.post(
-      '/custom-endpoint',
-      (req: Request, res: Response & { report_error?: Function }, next: NextFunction): void => {
-        const encryptedString = auth.aesEncrypt(Buffer.from(this.foo, 'utf8'));
-        res.setHeader('X-Verdaccio-Token-Plugin', encryptedString.toString());
-        next();
+  filter_metadata(packageInfo: Package): Promise<Package> {
+    const { versions, time } = packageInfo;
+    const dateThreshold = new Date(this.config.dateThreshold);
+
+    if (!time) {
+      throw new TypeError('Time of publication was not provided for package');
+    }
+
+    const newPackage = {
+      ...packageInfo,
+      versions: {
+        ...packageInfo.versions,
+      },
+      'dist-tags': {
+        ...packageInfo['dist-tags'],
+      },
+    };
+
+    const clearVersions: string[] = [];
+
+    Object.keys(versions).forEach(version => {
+      const publishTime = time[version];
+
+      if (!publishTime) {
+        throw new TypeError(`Time of publication was not provided for package version ${version}`);
       }
-    );
-    app.use('/-/npm/something-new', router);
+
+      if (new Date(publishTime) > dateThreshold) {
+        // clear untrusted version
+        clearVersions.push(version);
+      }
+    });
+
+    const clearVersionsSet = new Set(clearVersions);
+
+    // delete version from versions
+    clearVersions.forEach(version => {
+      delete newPackage.versions[version];
+    });
+
+    // delete a tag if it maps to a forbidden version
+    Object.entries(newPackage['dist-tags']).forEach(([tag, tagVersion]) => {
+      if (clearVersionsSet.has(tagVersion)) {
+        delete newPackage['dist-tags'][tag];
+      }
+    });
+
+    return Promise.resolve(newPackage);
   }
 }
