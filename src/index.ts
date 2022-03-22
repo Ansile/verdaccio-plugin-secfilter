@@ -5,15 +5,23 @@ import { CustomConfig } from '../types/index';
 
 export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<CustomConfig> {
   private readonly config: CustomConfig;
+  private readonly parsedConfig: {
+    dateThreshold: Date;
+  };
 
   constructor(config: CustomConfig, options: PluginOptions<CustomConfig>) {
     this.config = config;
+    this.parsedConfig = {
+      ...config,
+      dateThreshold: new Date(config.dateThreshold),
+    };
+
     options.logger.debug(`Loaded plugin-secfilter, ${JSON.stringify(config)}`);
   }
 
   filter_metadata(packageInfo: Package): Promise<Package> {
     const { versions, time } = packageInfo;
-    const dateThreshold = new Date(this.config.dateThreshold);
+    const { dateThreshold } = this.parsedConfig;
 
     if (!time) {
       throw new TypeError('Time of publication was not provided for package');
