@@ -8,6 +8,7 @@
     "outDir": "lib",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
+    "types": ["node"],
     "typeRoots": [
       "../../node_modules/@verdaccio/types/lib/verdaccio",
       "../../node_modules/@types"
