@@ -4,7 +4,23 @@
 
 ---
 
-## development
+## Usage
+
+- Install the plugin
+```shell
+npm i -g verdaccio-plugin-secfilter
+```
+
+- Add to verdaccio config (_for example you want to exclude package versions that were published after march 10, 2022_)
+```yaml
+filters:
+  plugin-secfilter:
+    dateThreshold: '2022-03-10T23:00:00.000Z'
+```
+
+- Start verdaccio
+
+## Development
 
 See the [verdaccio contributing guide](https://github.com/verdaccio/verdaccio/blob/master/CONTRIBUTING.md) for instructions setting up your development environment. 
 Once you have completed that, use the following npm tasks.
