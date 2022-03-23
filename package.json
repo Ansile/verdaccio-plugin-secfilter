@@ -26,7 +26,7 @@
     "typescript": "^3.9.5"
   },
   "keywords": [
-    "security,plugin,verdaccio,middleware,verdaccio-"
+    "security,verdaccio,plugin,filter,verdaccio-plugin,node"
   ],
   "author": "Ansile <ansilet@yandex.ru>",
   "license": "MIT",

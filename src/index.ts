@@ -3,25 +3,77 @@ import { IPluginStorageFilter, Package, PluginOptions } from '@verdaccio/types';
 
 import { CustomConfig } from '../types/index';
 
+/**
+ * Split a package name into name itself and scope
+ * @param name
+ */
+function splitName(name: string) {
+  const parts = name.split('/');
+
+  if (parts.length > 1) {
+    return {
+      scope: parts[0],
+      name: parts[1],
+    };
+  } else {
+    return {
+      name: parts[0],
+    };
+  }
+}
+
 export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<CustomConfig> {
   private readonly config: CustomConfig;
   private readonly parsedConfig: {
     dateThreshold: Date;
+    skipChecksFor: Map<string, 'package' | 'scope' | undefined>;
   };
 
   constructor(config: CustomConfig, options: PluginOptions<CustomConfig>) {
     this.config = config;
+
+    const skipMap = config.skipChecksFor.reduce((map, value) => {
+      if (typeof value === 'string') {
+        map.set(value, 'package');
+        return map;
+      }
+
+      if (typeof value === 'object' && typeof value.scope === 'string') {
+        if (!value.scope.startsWith('@')) {
+          throw new TypeError(`Scope value must start with @, found: ${value.scope}`)
+        }
+
+        map.set(value, 'scope');
+        return map;
+      }
+
+      throw new TypeError(`Could not parse rule ${JSON.stringify(value, null, 4)} in skipChecksFor`);
+    }, new Map());
+
     this.parsedConfig = {
       ...config,
+      skipChecksFor: skipMap,
       dateThreshold: new Date(config.dateThreshold),
     };
 
-    options.logger.debug(`Loaded plugin-secfilter, ${JSON.stringify(config)}`);
+    options.logger.debug(`Loaded plugin-secfilter, ${JSON.stringify(config, null, 4)}`);
   }
 
   filter_metadata(packageInfo: Package): Promise<Package> {
-    const { versions, time } = packageInfo;
-    const { dateThreshold } = this.parsedConfig;
+    const { versions, time, name } = packageInfo;
+    const { dateThreshold, skipChecksFor } = this.parsedConfig;
+
+    const { scope } = splitName(name);
+
+    if (scope && skipChecksFor.get(scope) === 'scope') {
+      // package is in checked scope, it's all good
+      return Promise.resolve(packageInfo);
+    }
+
+    if (skipChecksFor.get(name) === 'package') {
+      // package is a-ok
+      return Promise.resolve(packageInfo);
+    }
 
     if (!time) {
       throw new TypeError('Time of publication was not provided for package');
