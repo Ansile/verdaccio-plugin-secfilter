@@ -56,7 +56,11 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
       dateThreshold: new Date(config.dateThreshold),
     };
 
-    options.logger.debug(`Loaded plugin-secfilter, ${JSON.stringify(config, null, 4)}`);
+    options.logger.debug(
+      `Loaded plugin-secfilter, ${JSON.stringify(this.parsedConfig, null, 4)}, ${Array.from(
+        this.parsedConfig.skipChecksFor.entries()
+      )}`
+    );
   }
 
   filter_metadata(packageInfo: Package): Promise<Package> {
