@@ -31,6 +31,7 @@
   "author": "Ansile <ansilet@yandex.ru>",
   "license": "MIT",
   "scripts": {
+    "prepack": "npm run build",
     "release": "standard-version -a -s",
     "build": "npm run build:types && npm run build:js",
     "build:js": "babel src/ --out-dir lib --extensions \".ts,.tsx\"",
