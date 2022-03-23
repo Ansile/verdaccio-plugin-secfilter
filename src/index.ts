@@ -43,7 +43,7 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
           throw new TypeError(`Scope value must start with @, found: ${value.scope}`)
         }
 
-        map.set(value, 'scope');
+        map.set(value.scope, 'scope');
         return map;
       }
 
