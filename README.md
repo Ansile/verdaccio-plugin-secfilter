@@ -18,6 +18,16 @@ filters:
     dateThreshold: '2022-03-10T23:00:00.000Z'
 ```
 
+If you trust some packages and want to be able to update them, you can specify them like so:
+```yaml
+filters:
+  plugin-secfilter:
+    dateThreshold: '2022-03-10T23:00:00.000Z'
+    skipChecksFor:
+      - sass
+      - scope: '@babel'
+```
+
 - Start verdaccio
 
 ## Development
