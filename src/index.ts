@@ -32,7 +32,7 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
   constructor(config: CustomConfig, options: PluginOptions<CustomConfig>) {
     this.config = config;
 
-    const skipMap = config.skipChecksFor.reduce((map, value) => {
+    const skipMap = (config.skipChecksFor ?? []).reduce((map, value) => {
       if (typeof value === 'string') {
         map.set(value, 'package');
         return map;
@@ -50,10 +50,16 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
       throw new TypeError(`Could not parse rule ${JSON.stringify(value, null, 4)} in skipChecksFor`);
     }, new Map());
 
+    const dateThreshold = new Date(config.dateThreshold);
+
+    if (isNaN(dateThreshold.getTime())) {
+      throw new TypeError(`Invalid date ${config.dateThreshold} were provided for dateThreshold`);
+    }
+
     this.parsedConfig = {
       ...config,
       skipChecksFor: skipMap,
-      dateThreshold: new Date(config.dateThreshold),
+      dateThreshold,
     };
 
     options.logger.debug(
