@@ -1,0 +1,71 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`filters blocked packages filters when multiple rules are for versions 1`] = `
+Object {
+  "_attachments": Object {},
+  "_distfiles": Object {},
+  "_rev": "",
+  "_uplinks": Object {},
+  "dist-tags": Object {
+    "latest": "3.0.0",
+  },
+  "name": "@babel/test",
+  "readme": "
+Some versions of package are blocked by rules: >1.0.0,<=1.0.0",
+  "versions": Object {},
+}
+`;
+
+exports[`filters blocked packages filters when rules are for package 1`] = `
+Object {
+  "_attachments": Object {},
+  "_distfiles": Object {},
+  "_rev": "",
+  "_uplinks": Object {},
+  "dist-tags": Object {
+    "latest": "3.0.0",
+  },
+  "name": "@babel/test",
+  "readme": "All package versions blocked by rule",
+  "versions": Object {},
+}
+`;
+
+exports[`filters blocked packages filters when rules are for scope 1`] = `
+Object {
+  "_attachments": Object {},
+  "_distfiles": Object {},
+  "_rev": "",
+  "_uplinks": Object {},
+  "dist-tags": Object {
+    "latest": "3.0.0",
+  },
+  "name": "@babel/test",
+  "readme": "All packages in scope @babel blocked by rule",
+  "versions": Object {},
+}
+`;
+
+exports[`filters blocked packages filters when rules are for versions 1`] = `
+Object {
+  "_attachments": Object {},
+  "_distfiles": Object {},
+  "_rev": "",
+  "_uplinks": Object {},
+  "dist-tags": Object {
+    "latest": "3.0.0",
+  },
+  "name": "@babel/test",
+  "readme": "
+Some versions of package are blocked by rules: >1.0.0",
+  "versions": Object {
+    "1.0.0": Object {
+      "_id": "",
+      "main": "",
+      "name": "",
+      "readme": "",
+      "version": "",
+    },
+  },
+}
+`;
