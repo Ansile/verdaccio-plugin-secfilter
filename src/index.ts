@@ -225,6 +225,6 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
       return filterVersionsByPublishDate(newPackageInfo, dateThreshold);
     }
 
-    return Promise.resolve(packageInfo);
+    return Promise.resolve(newPackageInfo);
   }
 }
