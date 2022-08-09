@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [1.0.1](https://github.com/Ansile/verdaccio-plugin-secfilter/compare/v1.0.0...v1.0.1) (2022-08-09)
+
+
+### Bug Fixes
+
+* bug due to returning unprocessed info ([e9e810b](https://github.com/Ansile/verdaccio-plugin-secfilter/commit/e9e810bc7420ec3f683fbeca54f7043e1ebb8656))
+* docs, version => versions in config ([4a0f029](https://github.com/Ansile/verdaccio-plugin-secfilter/commit/4a0f029594412e0979dd87974e409a84d66164b3))
+* types for jest, npm ver ([a6690a1](https://github.com/Ansile/verdaccio-plugin-secfilter/commit/a6690a1e48fd6e5d6bf8c29cd4b21b478b5950b2))
+
 ## [1.0.0](https://github.com/Ansile/verdaccio-plugin-secfilter/compare/v0.1.4...v1.0.0) (2022-08-09)
 
 
