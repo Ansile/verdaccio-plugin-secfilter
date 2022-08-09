@@ -11,6 +11,24 @@
 npm i -g verdaccio-plugin-secfilter
 ```
 
+- Configure options:
+
+### 
+```yaml
+filters:
+  plugin-secfilter:
+    block:
+      - scope: @evil # block all packages in scope
+      - package: semvver # block a malicious package
+      - package: @coolauthor/stolen
+        versions: '>2.0.1' # block some malicious versions of previously ok package
+                           # uses https://www.npmjs.com/package/semver syntax
+```
+
+### dateThreshold (DEPRECATED)
+
+This option is deprecated and is to be used **only** if you need a fast solution and you are **sure** your security was breached recently. 
+
 - Add to verdaccio config (_for example you want to exclude package versions that were published after march 10, 2022_)
 ```yaml
 filters:
@@ -18,17 +36,7 @@ filters:
     dateThreshold: '2022-03-10T23:00:00.000Z'
 ```
 
-If you trust some packages and want to be able to update them, you can specify them like so:
-```yaml
-filters:
-  plugin-secfilter:
-    dateThreshold: '2022-03-10T23:00:00.000Z'
-    skipChecksFor:
-      - sass
-      - scope: '@babel'
-```
-
-- Start verdaccio
+- [Start verdaccio](https://verdaccio.org/docs/installation)
 
 ## Development
 

@@ -91,14 +91,14 @@ function isScopeRule(rule: PackageBlockRule): rule is { scope: string } {
   return 'scope' in rule && typeof rule.scope === 'string';
 }
 
-function isPackageRule(rule: PackageBlockRule): rule is { package: string; version: never } {
+function isPackageRule(rule: PackageBlockRule): rule is { package: string; versions: never } {
   // eslint-disable-next-line no-prototype-builtins
-  return 'package' in rule && !('version' in rule);
+  return 'package' in rule && !('versions' in rule);
 }
 
-function isPackageAndVersionRule(rule: PackageBlockRule): rule is { package: string; version: string } {
+function isPackageAndVersionRule(rule: PackageBlockRule): rule is { package: string; versions: string } {
   // eslint-disable-next-line no-prototype-builtins
-  return 'package' in rule && 'version' in rule;
+  return 'package' in rule && 'versions' in rule;
 }
 
 /**
@@ -177,7 +177,7 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
         }
 
         try {
-          const range = new Range(value.version);
+          const range = new Range(value.versions);
 
           map.set(value.package, [...previousRanges, range]);
         } catch (e) {
