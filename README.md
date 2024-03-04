@@ -23,6 +23,9 @@ filters:
       - package: @coolauthor/stolen
         versions: '>2.0.1' # block some malicious versions of previously ok package
                            # uses https://www.npmjs.com/package/semver syntax
+      - package: @coolauthor/stolen
+        versions: '>2.0.1'
+        strategy: replace # block some malicious versions of previously ok package, replacing them with older, correct versions
 ```
 
 ### dateThreshold (DEPRECATED)

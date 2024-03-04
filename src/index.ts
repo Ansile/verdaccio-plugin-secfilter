@@ -1,5 +1,5 @@
 /* eslint-disable new-cap */
-import { IPluginStorageFilter, Package, PluginOptions } from '@verdaccio/types';
+import { IPluginStorageFilter, Package, PluginOptions, Logger } from '@verdaccio/types';
 import { Range, satisfies } from 'semver';
 
 import { BlockStrategy, CustomConfig, PackageBlockRule, ParsedBlockRule } from '../types/index';
@@ -107,8 +107,13 @@ function isPackageAndVersionRule(
  * filter out all blocked package versions. If all package is blocked, or it's scope is blocked - block all versions.
  * @param packageInfo
  * @param block
+ * @param logger
  */
-export function filterBlockedVersions(packageInfo: Readonly<Package>, block: Map<string, ParsedBlockRule>): Package {
+export function filterBlockedVersions(
+  packageInfo: Readonly<Package>,
+  block: Map<string, ParsedBlockRule>,
+  logger: Logger
+): Package {
   const { scope } = splitName(packageInfo.name);
 
   if (scope && block.get(scope) === 'scope') {
@@ -133,18 +138,62 @@ export function filterBlockedVersions(packageInfo: Readonly<Package>, block: Map
 
   const blockedVersionRanges = blockRule.block as Range[];
 
-  Object.keys(newPackageInfo.versions).forEach(version => {
-    blockedVersionRanges.forEach(versionRange => {
-      if (satisfies(version, versionRange, { includePrerelease: true, loose: true })) {
-        delete newPackageInfo.versions[version];
-      }
-    });
-  });
-
   // Add debug info for devs
   newPackageInfo.readme =
     (newPackageInfo.readme || '') +
     `\nSome versions of package are blocked by rules: ${blockedVersionRanges.map(range => range.raw)}`;
+
+  if (blockRule.strategy === 'block') {
+    Object.keys(newPackageInfo.versions).forEach(version => {
+      blockedVersionRanges.forEach(versionRange => {
+        if (satisfies(version, versionRange, { includePrerelease: true, loose: true })) {
+          delete newPackageInfo.versions[version];
+        }
+      });
+    });
+
+    return newPackageInfo;
+  }
+
+  // Мы предполагаем что порядок версий уже отсортирован
+  const nonBlockedVersions = { ...newPackageInfo.versions };
+  const newVersionsMapping: Record<string, string | null> = {};
+
+  blockedVersionRanges.forEach(versionRange => {
+    const allVersions = Object.keys(nonBlockedVersions);
+
+    let lastNonBlockedVersion: string | null = null;
+    let firstNonBlockedVersion: string | null = null;
+
+    allVersions.forEach((version, index) => {
+      if (satisfies(version, versionRange, { includePrerelease: true, loose: true })) {
+        delete nonBlockedVersions[version];
+        newVersionsMapping[version] = lastNonBlockedVersion;
+      } else {
+        lastNonBlockedVersion = version;
+        firstNonBlockedVersion = firstNonBlockedVersion ?? version;
+      }
+    });
+  });
+
+  logger.debug(`Filtering package ${packageInfo.name}, replacing versions`);
+  logger.debug(`${JSON.stringify(newVersionsMapping)}`);
+
+  const removedVersions = Object.entries(newVersionsMapping).filter(([_, replace]) => replace === null) as [string, null][];
+  const replacedVersions = Object.entries(newVersionsMapping).filter(([_, replace]) => replace !== null) as [string, string][];
+
+  removedVersions.forEach(([version]) => {
+    logger.debug(`No version to replace ${version}`);
+    delete newPackageInfo.versions[version];
+    return;
+  });
+
+  replacedVersions.forEach(([version, replaceVersion]) => {
+    newPackageInfo.versions[version] = { ...newPackageInfo.versions[replaceVersion], version };
+  });
+
+  newPackageInfo.readme += `\nSome versions of package are fully blocked: ${removedVersions.map(a => a[0])}`;
+  newPackageInfo.readme += `\nSome versions of package are replaced by other: ${removedVersions.map(a => `${a[0]} => ${a[1]}`)}`;
 
   return newPackageInfo;
 }
@@ -155,9 +204,11 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
     dateThreshold: Date | null;
     block: Map<string, ParsedBlockRule>;
   };
+  protected readonly logger: PluginOptions<unknown>['logger'];
 
   constructor(config: CustomConfig, options: PluginOptions<CustomConfig>) {
     this.config = config;
+    this.logger = options.logger;
 
     const blockMap = (config.block ?? []).reduce((map, value) => {
       // eslint-disable-next-line no-prototype-builtins
@@ -176,7 +227,7 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
       }
 
       if (isPackageAndVersionRule(value)) {
-        const previousConfig = map.get(value.package) || '';
+        const previousConfig = map.get(value.package) || { block: [] };
 
         if (typeof previousConfig === 'string') {
           return map; // use more strict rule
@@ -224,7 +275,7 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
 
     let newPackageInfo = packageInfo;
     if (block.size > 0) {
-      newPackageInfo = filterBlockedVersions(packageInfo, block);
+      newPackageInfo = filterBlockedVersions(packageInfo, block, this.logger);
     }
 
     if (dateThreshold) {
