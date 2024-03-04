@@ -2,7 +2,7 @@
 import { IPluginStorageFilter, Package, PluginOptions } from '@verdaccio/types';
 import { Range, satisfies } from 'semver';
 
-import { CustomConfig, PackageBlockRule, ParsedBlockRule } from '../types/index';
+import { BlockStrategy, CustomConfig, PackageBlockRule, ParsedBlockRule } from '../types/index';
 
 /**
  * Split a package name into name itself and scope
@@ -96,7 +96,9 @@ function isPackageRule(rule: PackageBlockRule): rule is { package: string; versi
   return 'package' in rule && !('versions' in rule);
 }
 
-function isPackageAndVersionRule(rule: PackageBlockRule): rule is { package: string; versions: string } {
+function isPackageAndVersionRule(
+  rule: PackageBlockRule
+): rule is { package: string; versions: string; strategy?: BlockStrategy } {
   // eslint-disable-next-line no-prototype-builtins
   return 'package' in rule && 'versions' in rule;
 }
@@ -123,9 +125,13 @@ export function filterBlockedVersions(packageInfo: Readonly<Package>, block: Map
     return { ...packageInfo, versions: {}, readme: `All package versions blocked by rule` };
   }
 
+  if (blockRule === 'scope') {
+    throw new Error('Unexpected case - blockRule for package should never be "scope"');
+  }
+
   const newPackageInfo = getPackageClone(packageInfo);
 
-  const blockedVersionRanges = blockRule as Range[];
+  const blockedVersionRanges = blockRule.block as Range[];
 
   Object.keys(newPackageInfo.versions).forEach(version => {
     blockedVersionRanges.forEach(versionRange => {
@@ -170,16 +176,16 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
       }
 
       if (isPackageAndVersionRule(value)) {
-        const previousRanges = map.get(value.package) || [];
+        const previousConfig = map.get(value.package) || '';
 
-        if (typeof previousRanges === 'string') {
+        if (typeof previousConfig === 'string') {
           return map; // use more strict rule
         }
 
         try {
           const range = new Range(value.versions);
 
-          map.set(value.package, [...previousRanges, range]);
+          map.set(value.package, { block: [...previousConfig.block, range], strategy: value.strategy ?? 'block' });
         } catch (e) {
           options.logger.error('Error parsing rule failed:');
           options.logger.error(e);

@@ -40,14 +40,14 @@ describe('filters blocked packages', () => {
   });
 
   test('filters when rules are for versions', () => {
-    const block = new Map<string, ParsedBlockRule>([['@babel/test', [new semver.Range('>1.0.0')]]]);
+    const block = new Map<string, ParsedBlockRule>([['@babel/test', { block: [new semver.Range('>1.0.0')] }]]);
 
     expect(filterBlockedVersions(examplePackage, block)).toMatchSnapshot();
   });
 
   test('filters when multiple rules are for versions', () => {
     const block = new Map<string, ParsedBlockRule>([
-      ['@babel/test', [new semver.Range('>1.0.0'), new semver.Range('<=1.0.0')]],
+      ['@babel/test', { block: [new semver.Range('>1.0.0'), new semver.Range('<=1.0.0')] }],
     ]);
 
     expect(filterBlockedVersions(examplePackage, block)).toMatchSnapshot();
