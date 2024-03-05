@@ -26,6 +26,7 @@ filters:
       - package: @coolauthor/stolen
         versions: '>2.0.1'
         strategy: replace # block some malicious versions of previously ok package, replacing them with older, correct versions
+                          # use when package is used in transient dependencies and 'block' breaks the installs
 ```
 
 ### dateThreshold (DEPRECATED)
