@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [1.1.0](https://github.com/Ansile/verdaccio-plugin-secfilter/compare/v1.0.1...v1.1.0) (2024-03-05)
+
+
+### Features
+
+* implementation of "replace" strategy for malicious package version ranges ([21acd63](https://github.com/Ansile/verdaccio-plugin-secfilter/commit/21acd63e965370d6505086ebf9da948511d586da))
+* migrate to more scalable configuration format ([4b0c97e](https://github.com/Ansile/verdaccio-plugin-secfilter/commit/4b0c97e6ef7e6532f5c695ea7db916220df41fca))
+
 ### [1.0.1](https://github.com/Ansile/verdaccio-plugin-secfilter/compare/v1.0.0...v1.0.1) (2022-08-09)
 
 
