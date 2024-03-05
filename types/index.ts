@@ -7,4 +7,12 @@ export interface CustomConfig extends Config {
   block?: Array<PackageBlockRule>;
 }
 
-export type ParsedBlockRule = Range[] | 'scope' | 'package' | undefined;
+export type ParsedBlockKind = 'scope' | 'package' | undefined;
+
+export type BlockStrategy = 'block' | 'replace';
+interface ParsedBlockConfig {
+  block: Range[];
+  strategy?: BlockStrategy;
+}
+
+export type ParsedBlockRule = ParsedBlockConfig | ParsedBlockKind;

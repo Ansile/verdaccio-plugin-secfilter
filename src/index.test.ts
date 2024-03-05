@@ -1,4 +1,4 @@
-import { Package, Version } from '@verdaccio/types';
+import { Package, Version, Logger } from '@verdaccio/types';
 
 import * as semver from 'semver';
 import { ParsedBlockRule } from '../types';
@@ -26,30 +26,42 @@ const examplePackage: Package = {
   },
 };
 
+
+const noop = () => {};
+const logger: Logger = {
+  child: noop,
+  debug: noop,
+  error: noop,
+  http: noop,
+  warn: noop,
+  info: noop,
+  trace: noop,
+};
+
 describe('filters blocked packages', () => {
   test('filters when rules are for scope', () => {
     const block = new Map<string, ParsedBlockRule>([['@babel', 'scope']]);
 
-    expect(filterBlockedVersions(examplePackage, block)).toMatchSnapshot();
+    expect(filterBlockedVersions(examplePackage, block, logger)).toMatchSnapshot();
   });
 
   test('filters when rules are for package', () => {
     const block = new Map<string, ParsedBlockRule>([['@babel/test', 'package']]);
 
-    expect(filterBlockedVersions(examplePackage, block)).toMatchSnapshot();
+    expect(filterBlockedVersions(examplePackage, block, logger)).toMatchSnapshot();
   });
 
   test('filters when rules are for versions', () => {
-    const block = new Map<string, ParsedBlockRule>([['@babel/test', [new semver.Range('>1.0.0')]]]);
+    const block = new Map<string, ParsedBlockRule>([['@babel/test', { block: [new semver.Range('>1.0.0')] }]]);
 
-    expect(filterBlockedVersions(examplePackage, block)).toMatchSnapshot();
+    expect(filterBlockedVersions(examplePackage, block, logger)).toMatchSnapshot();
   });
 
   test('filters when multiple rules are for versions', () => {
     const block = new Map<string, ParsedBlockRule>([
-      ['@babel/test', [new semver.Range('>1.0.0'), new semver.Range('<=1.0.0')]],
+      ['@babel/test', { block: [new semver.Range('>1.0.0'), new semver.Range('<=1.0.0')] }],
     ]);
 
-    expect(filterBlockedVersions(examplePackage, block)).toMatchSnapshot();
+    expect(filterBlockedVersions(examplePackage, block, logger)).toMatchSnapshot();
   });
 });

@@ -1,8 +1,8 @@
 /* eslint-disable new-cap */
-import { IPluginStorageFilter, Package, PluginOptions } from '@verdaccio/types';
+import { IPluginStorageFilter, Package, PluginOptions, Logger } from '@verdaccio/types';
 import { Range, satisfies } from 'semver';
 
-import { CustomConfig, PackageBlockRule, ParsedBlockRule } from '../types/index';
+import { BlockStrategy, CustomConfig, PackageBlockRule, ParsedBlockRule } from '../types/index';
 
 /**
  * Split a package name into name itself and scope
@@ -96,7 +96,9 @@ function isPackageRule(rule: PackageBlockRule): rule is { package: string; versi
   return 'package' in rule && !('versions' in rule);
 }
 
-function isPackageAndVersionRule(rule: PackageBlockRule): rule is { package: string; versions: string } {
+function isPackageAndVersionRule(
+  rule: PackageBlockRule
+): rule is { package: string; versions: string; strategy?: BlockStrategy } {
   // eslint-disable-next-line no-prototype-builtins
   return 'package' in rule && 'versions' in rule;
 }
@@ -105,8 +107,13 @@ function isPackageAndVersionRule(rule: PackageBlockRule): rule is { package: str
  * filter out all blocked package versions. If all package is blocked, or it's scope is blocked - block all versions.
  * @param packageInfo
  * @param block
+ * @param logger
  */
-export function filterBlockedVersions(packageInfo: Readonly<Package>, block: Map<string, ParsedBlockRule>): Package {
+export function filterBlockedVersions(
+  packageInfo: Readonly<Package>,
+  block: Map<string, ParsedBlockRule>,
+  logger: Logger
+): Package {
   const { scope } = splitName(packageInfo.name);
 
   if (scope && block.get(scope) === 'scope') {
@@ -123,22 +130,70 @@ export function filterBlockedVersions(packageInfo: Readonly<Package>, block: Map
     return { ...packageInfo, versions: {}, readme: `All package versions blocked by rule` };
   }
 
+  if (blockRule === 'scope') {
+    throw new Error('Unexpected case - blockRule for package should never be "scope"');
+  }
+
   const newPackageInfo = getPackageClone(packageInfo);
 
-  const blockedVersionRanges = blockRule as Range[];
-
-  Object.keys(newPackageInfo.versions).forEach(version => {
-    blockedVersionRanges.forEach(versionRange => {
-      if (satisfies(version, versionRange, { includePrerelease: true, loose: true })) {
-        delete newPackageInfo.versions[version];
-      }
-    });
-  });
+  const blockedVersionRanges = blockRule.block as Range[];
 
   // Add debug info for devs
   newPackageInfo.readme =
     (newPackageInfo.readme || '') +
     `\nSome versions of package are blocked by rules: ${blockedVersionRanges.map(range => range.raw)}`;
+
+  if (blockRule.strategy === 'block') {
+    Object.keys(newPackageInfo.versions).forEach(version => {
+      blockedVersionRanges.forEach(versionRange => {
+        if (satisfies(version, versionRange, { includePrerelease: true, loose: true })) {
+          delete newPackageInfo.versions[version];
+        }
+      });
+    });
+
+    return newPackageInfo;
+  }
+
+  // Мы предполагаем что порядок версий уже отсортирован
+  const nonBlockedVersions = { ...newPackageInfo.versions };
+  const newVersionsMapping: Record<string, string | null> = {};
+
+  blockedVersionRanges.forEach(versionRange => {
+    const allVersions = Object.keys(nonBlockedVersions);
+
+    let lastNonBlockedVersion: string | null = null;
+    let firstNonBlockedVersion: string | null = null;
+
+    allVersions.forEach((version, index) => {
+      if (satisfies(version, versionRange, { includePrerelease: true, loose: true })) {
+        delete nonBlockedVersions[version];
+        newVersionsMapping[version] = lastNonBlockedVersion;
+      } else {
+        lastNonBlockedVersion = version;
+        firstNonBlockedVersion = firstNonBlockedVersion ?? version;
+      }
+    });
+  });
+
+  logger.debug(`Filtering package ${packageInfo.name}, replacing versions`);
+  logger.debug(`${JSON.stringify(newVersionsMapping)}`);
+
+  const removedVersions = Object.entries(newVersionsMapping).filter(([_, replace]) => replace === null) as [string, null][];
+  const replacedVersions = Object.entries(newVersionsMapping).filter(([_, replace]) => replace !== null) as [string, string][];
+
+  removedVersions.forEach(([version]) => {
+    logger.debug(`No version to replace ${version}`);
+    delete newPackageInfo.versions[version];
+    return;
+  });
+
+  replacedVersions.forEach(([version, replaceVersion]) => {
+    newPackageInfo.versions[version] = { ...newPackageInfo.versions[replaceVersion], version };
+  });
+
+  newPackageInfo.readme += `\nSome versions of package are fully blocked: ${removedVersions.map(a => a[0])}`;
+  newPackageInfo.readme += `\nSome versions of package are replaced by other: ${removedVersions.map(a => `${a[0]} => ${a[1]}`)}`;
 
   return newPackageInfo;
 }
@@ -149,9 +204,11 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
     dateThreshold: Date | null;
     block: Map<string, ParsedBlockRule>;
   };
+  protected readonly logger: PluginOptions<unknown>['logger'];
 
   constructor(config: CustomConfig, options: PluginOptions<CustomConfig>) {
     this.config = config;
+    this.logger = options.logger;
 
     const blockMap = (config.block ?? []).reduce((map, value) => {
       // eslint-disable-next-line no-prototype-builtins
@@ -170,16 +227,16 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
       }
 
       if (isPackageAndVersionRule(value)) {
-        const previousRanges = map.get(value.package) || [];
+        const previousConfig = map.get(value.package) || { block: [] };
 
-        if (typeof previousRanges === 'string') {
+        if (typeof previousConfig === 'string') {
           return map; // use more strict rule
         }
 
         try {
           const range = new Range(value.versions);
 
-          map.set(value.package, [...previousRanges, range]);
+          map.set(value.package, { block: [...previousConfig.block, range], strategy: value.strategy ?? 'block' });
         } catch (e) {
           options.logger.error('Error parsing rule failed:');
           options.logger.error(e);
@@ -218,7 +275,7 @@ export default class VerdaccioMiddlewarePlugin implements IPluginStorageFilter<C
 
     let newPackageInfo = packageInfo;
     if (block.size > 0) {
-      newPackageInfo = filterBlockedVersions(packageInfo, block);
+      newPackageInfo = filterBlockedVersions(packageInfo, block, this.logger);
     }
 
     if (dateThreshold) {
